@@ -1,0 +1,72 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+from sklearn import svm
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction import image
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
+
+# Define paths
+data_dir = 'path/to/dogs-vs-cats/dataset/'
+train_dir = os.path.join(data_dir, 'train')
+
+# Define image parameters
+img_width, img_height = 150, 150
+
+# Load and preprocess images
+def load_images(directory, target_size=(img_width, img_height)):
+    images = []
+    labels = []
+    for label in ['cats', 'dogs']:
+        folder_path = os.path.join(directory, label)
+        for filename in os.listdir(folder_path):
+            img_path = os.path.join(folder_path, filename)
+            img = load_img(img_path, target_size=target_size)
+            img_array = img_to_array(img)
+            images.append(img_array)
+            labels.append(0 if label == 'cats' else 1)
+    return np.array(images), np.array(labels)
+
+# Load data
+images, labels = load_images(train_dir)
+
+# Flatten images
+num_samples = images.shape[0]
+X = images.reshape(num_samples, -1)
+y = labels
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Create a pipeline with StandardScaler and SVM
+pipeline = make_pipeline(
+    StandardScaler(),
+    svm.SVC(kernel='linear', C=1.0, random_state=42)
+)
+
+# Train the SVM model
+pipeline.fit(X_train, y_train)
+
+# Make predictions
+y_pred = pipeline.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy:.2f}')
+
+# Optional: Visualize some predictions
+def visualize_predictions(images, true_labels, pred_labels, num_images=5):
+    plt.figure(figsize=(10, 5))
+    for i in range(num_images):
+        plt.subplot(1, num_images, i + 1)
+        plt.imshow(images[i].astype('uint8'))
+        plt.title(f'True: {true_labels[i]}, Pred: {pred_labels[i]}')
+        plt.axis('off')
+    plt.show()
+
+# Visualize some test images and predictions
+visualize_predictions(X_test.reshape(-1, img_width, img_height, 3), y_test, y_pred)
